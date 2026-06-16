@@ -182,17 +182,18 @@ function renderPreview() {
     </tr>`;
   });
 
-  // 交通費空行（最低3行）
+  // 交通費：明細後に空行を入れてから以下余白、さらに空行を挟んで集計を右下に表示
   const tFilled = transportRows.length;
   for (let i = tFilled; i < Math.max(tFilled + 1, 3); i++) transportHtml += empty();
 
-  // 以下余白
   transportHtml += `<tr><td class="left" colspan="${COLS}">以下余白</td></tr>`;
-  // 追加空行
-  for (let i = 0; i < 5; i++) transportHtml += empty();
+  for (let i = 0; i < 8; i++) transportHtml += empty();
 
   const transportInnerTax = Math.round(transportSubtotal * taxrate / 100);
+  const grand = performGrand + transportSubtotal;
 
+  transportHtml += empty();
+  transportHtml += empty();
   transportHtml += `
     <tr><td colspan="8" style="border:none;"></td>
         <td colspan="2" class="ft-label">交通費 ②</td>
@@ -200,19 +201,13 @@ function renderPreview() {
     <tr><td colspan="8" style="border:none;"></td>
         <td colspan="2" class="ft-label">内税　${taxrate} %</td>
         <td class="ft-val">${transportInnerTax.toLocaleString()}</td></tr>
+    <tr><td colspan="8" style="border:none;"></td>
+        <td colspan="2" class="ft-label ft-grand">総計（①＋②）</td>
+        <td class="ft-val ft-grand">¥${grand.toLocaleString()}</td></tr>
   `;
 
   document.getElementById('p-transport-section').innerHTML = transportHtml;
-
-  // ── 総計①+② ──
-  const grand = performGrand + transportSubtotal;
-  document.getElementById('p-grand-foot').innerHTML = `
-    <tr>
-      <td colspan="8" style="border:none;"></td>
-      <td colspan="2" class="ft-label ft-grand">総計（①＋②）</td>
-      <td class="ft-val ft-grand">¥${grand.toLocaleString()}</td>
-    </tr>
-  `;
+  document.getElementById('p-grand-foot').innerHTML = '';
 
   document.getElementById('p-total').textContent = `¥${grand.toLocaleString()}`;
 }
