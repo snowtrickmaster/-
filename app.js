@@ -37,9 +37,21 @@ function updatePerformRow(id, field, val) {
   renderPreview();
 }
 
+// 交通費の行更新：単価変更時は備考欄に「片道◯◯円」を自動入力する。
+// 編集パネル全体は再描画せず、備考inputだけをピンポイントで書き換えることで
+// 入力中にフォーカスが外れて入力が止まる問題を防ぐ。
 function updateTransportRow(id, field, val) {
   const r = transportRows.find(r => r.id === id);
-  if (r) r[field] = val;
+  if (!r) return;
+  r[field] = val;
+
+  if (field === 'price') {
+    const price = parseFloat(val) || 0;
+    r.note = price > 0 ? `片道${Math.round(price / 2).toLocaleString()}円` : '';
+    const noteInput = document.querySelector(`input[data-note-id="${id}"]`);
+    if (noteInput) noteInput.value = r.note;
+  }
+
   renderPreview();
 }
 
@@ -47,13 +59,28 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function inp(label, field, id, placeholder, type='text', onchange='updatePerformRow') {
-  const rows = onchange === 'updatePerformRow' ? performRows : transportRows;
-  const val = rows.find(r => r.id === id)?.[field] || '';
+// 出演料用フィールド
+function inpPerform(label, field, id, placeholder, type='text') {
+  const val = performRows.find(r => r.id === id)?.[field] || '';
   return `<div class="field-group">
     <label>${label}</label>
     <input type="${type}" value="${esc(val)}" placeholder="${placeholder}"
-      oninput="${onchange}(${id},'${field}',this.value)" />
+      oninput="updatePerformRow(${id},'${field}',this.value)" />
+  </div>`;
+}
+
+// 交通費用フィールド（備考は自動入力・読み取り専用）
+function inpTransport(label, field, id, placeholder, type='text', readonly=false) {
+  const r = transportRows.find(r => r.id === id);
+  const val = r?.[field] || '';
+  const cls = readonly ? 'auto-filled' : '';
+  const ro = readonly ? 'readonly' : '';
+  const dataAttr = readonly ? `data-note-id="${id}"` : '';
+  return `<div class="field-group">
+    <label>${label}</label>
+    <input type="${type}" value="${esc(val)}" placeholder="${placeholder}" class="${cls}" ${ro} ${dataAttr}
+      oninput="updateTransportRow(${id},'${field}',this.value)" />
+    ${readonly ? '<div class="auto-hint">単価の半額を自動入力</div>' : ''}
   </div>`;
 }
 
@@ -64,15 +91,15 @@ function renderPerformEditor() {
     <div class="row-editor">
       <button class="del" onclick="removePerformRow(${r.id})">×</button>
       <div class="row-grid">
-        <div>${inp('月日','date',r.id,'10/22')}</div>
-        <div>${inp('名前','name',r.id,'古賀 太郎')}</div>
-        <div>${inp('人数','count',r.id,'12','number')}</div>
-        <div>${inp('開始','from',r.id,'8:30')}</div>
-        <div>${inp('終了','to',r.id,'15:30')}</div>
-        <div>${inp('場所','place',r.id,'入間基地')}</div>
-        <div>${inp('シーン','scene',r.id,'模擬患者')}</div>
-        <div>${inp('単価','price',r.id,'24600','number')}</div>
-        <div class="wide">${inp('備考','note',r.id,'')}</div>
+        <div>${inpPerform('月日','date',r.id,'10/22')}</div>
+        <div>${inpPerform('名前','name',r.id,'古賀 太郎')}</div>
+        <div>${inpPerform('人数','count',r.id,'12','number')}</div>
+        <div>${inpPerform('開始','from',r.id,'8:30')}</div>
+        <div>${inpPerform('終了','to',r.id,'15:30')}</div>
+        <div>${inpPerform('場所','place',r.id,'入間基地')}</div>
+        <div>${inpPerform('シーン','scene',r.id,'模擬患者')}</div>
+        <div>${inpPerform('単価','price',r.id,'24600','number')}</div>
+        <div class="wide">${inpPerform('備考','note',r.id,'')}</div>
       </div>
     </div>
   `).join('');
@@ -85,12 +112,12 @@ function renderTransportEditor() {
     <div class="row-editor">
       <button class="del" onclick="removeTransportRow(${r.id})">×</button>
       <div class="row-grid">
-        <div>${inp('月日','date',r.id,'10/22','text','updateTransportRow')}</div>
-        <div>${inp('名前','name',r.id,'古賀 太郎','text','updateTransportRow')}</div>
-        <div>${inp('人数','count',r.id,'12','number','updateTransportRow')}</div>
-        <div class="wide">${inp('経路','route',r.id,'12名（稲荷山公園駅〜池袋）','text','updateTransportRow')}</div>
-        <div>${inp('単価','price',r.id,'980','number','updateTransportRow')}</div>
-        <div class="wide">${inp('備考','note',r.id,'片道490円','text','updateTransportRow')}</div>
+        <div>${inpTransport('月日','date',r.id,'10/22')}</div>
+        <div>${inpTransport('名前','name',r.id,'古賀 太郎')}</div>
+        <div>${inpTransport('人数','count',r.id,'12','number')}</div>
+        <div class="wide">${inpTransport('経路','route',r.id,'12名（稲荷山公園駅〜池袋）')}</div>
+        <div>${inpTransport('単価（往復）','price',r.id,'980','number')}</div>
+        <div class="wide">${inpTransport('備考（自動）','note',r.id,'片道490円','text',true)}</div>
       </div>
     </div>
   `).join('');
@@ -101,6 +128,14 @@ function fmtDate() {
   const d = new Date();
   const reiwa = d.getFullYear() - 2018;
   return `令和　${reiwa}　年　　${d.getMonth()+1}　月　${d.getDate()}　日`;
+}
+
+function ftRow(label, val, cls='') {
+  return `<tr>
+    <td colspan="9" class="nb"></td>
+    <td class="ft-label ${cls}">${label}</td>
+    <td class="ft-val ${cls}">${val}</td>
+  </tr>`;
 }
 
 // ── プレビュー描画 ──
@@ -140,24 +175,17 @@ function renderPreview() {
     </tr>`;
   });
 
-  // 出演料空行（最低3行）
-  const pFilled = performRows.length;
-  for (let i = pFilled; i < Math.max(pFilled + 1, 3); i++) performHtml += empty();
+  // 出演料：明細直後に空行を挟んでから、すぐ右下に集計を表示
+  for (let i = performRows.length; i < Math.max(performRows.length + 2, 3); i++) {
+    performHtml += empty();
+  }
 
   const performTax = Math.round(performSubtotal * taxrate / 100);
   const performGrand = performSubtotal + performTax;
 
-  performHtml += `
-    <tr><td colspan="8" style="border:none;"></td>
-        <td colspan="2" class="ft-label">出演料</td>
-        <td class="ft-val">${performSubtotal.toLocaleString()}</td></tr>
-    <tr><td colspan="8" style="border:none;"></td>
-        <td colspan="2" class="ft-label">消費税　${taxrate} %</td>
-        <td class="ft-val">${performTax.toLocaleString()}</td></tr>
-    <tr><td colspan="8" style="border:none;"></td>
-        <td colspan="2" class="ft-label ft-subtotal">総計 ①</td>
-        <td class="ft-val ft-subtotal">¥${performGrand.toLocaleString()}</td></tr>
-  `;
+  performHtml += ftRow('出演料', performSubtotal.toLocaleString());
+  performHtml += ftRow(`消費税　${taxrate} %`, performTax.toLocaleString());
+  performHtml += ftRow('総計 ①', `¥${performGrand.toLocaleString()}`, 'ft-sub');
 
   document.getElementById('p-perform-section').innerHTML = performHtml;
 
@@ -182,29 +210,22 @@ function renderPreview() {
     </tr>`;
   });
 
-  // 交通費：明細後に空行を入れてから以下余白、さらに空行を挟んで集計を右下に表示
-  const tFilled = transportRows.length;
-  for (let i = tFilled; i < Math.max(tFilled + 1, 3); i++) transportHtml += empty();
-
-  transportHtml += `<tr><td class="left" colspan="${COLS}">以下余白</td></tr>`;
-  for (let i = 0; i < 8; i++) transportHtml += empty();
+  // 交通費：明細直後に空行を挟んでから集計（出演料と同じパターン）
+  for (let i = transportRows.length; i < Math.max(transportRows.length + 2, 3); i++) {
+    transportHtml += empty();
+  }
 
   const transportInnerTax = Math.round(transportSubtotal * taxrate / 100);
-  const grand = performGrand + transportSubtotal;
 
-  transportHtml += empty();
-  transportHtml += empty();
-  transportHtml += `
-    <tr><td colspan="8" style="border:none;"></td>
-        <td colspan="2" class="ft-label">交通費 ②</td>
-        <td class="ft-val">¥${transportSubtotal.toLocaleString()}</td></tr>
-    <tr><td colspan="8" style="border:none;"></td>
-        <td colspan="2" class="ft-label">内税　${taxrate} %</td>
-        <td class="ft-val">${transportInnerTax.toLocaleString()}</td></tr>
-    <tr><td colspan="8" style="border:none;"></td>
-        <td colspan="2" class="ft-label ft-grand">総計（①＋②）</td>
-        <td class="ft-val ft-grand">¥${grand.toLocaleString()}</td></tr>
-  `;
+  transportHtml += ftRow('交通費 ②', `¥${transportSubtotal.toLocaleString()}`);
+  transportHtml += ftRow(`内税　${taxrate} %`, transportInnerTax.toLocaleString());
+
+  // 以下余白 → 空行 → 一番右下に総計（①＋②）
+  transportHtml += `<tr><td class="left" colspan="${COLS}">以下余白</td></tr>`;
+  for (let i = 0; i < 5; i++) transportHtml += empty();
+
+  const grand = performGrand + transportSubtotal;
+  transportHtml += ftRow('総計（①＋②）', `¥${grand.toLocaleString()}`, 'ft-grand');
 
   document.getElementById('p-transport-section').innerHTML = transportHtml;
   document.getElementById('p-grand-foot').innerHTML = '';

@@ -345,6 +345,12 @@ td.section-header {
   font-size: 11px;
 }
 
+/* ── 枠線なしセル（フッター行の余白部分） ── */
+table.qt td.nb {
+  border: none;
+  background: #fff;
+}
+
 /* ── フッター行 ── */
 .ft-label {
   text-align: right;
@@ -362,11 +368,23 @@ td.section-header {
   font-size: 11px;
 }
 
-.ft-subtotal {
+.ft-sub {
   background: #f5f5f5;
 }
 
 .ft-grand {
   background: #e8e8e8;
   font-size: 12px;
+}
+
+/* ── 交通費の自動入力（備考）フィールド ── */
+.field-group input.auto-filled {
+  background: #eef5ff;
+  color: #2a5db0;
+}
+
+.field-group .auto-hint {
+  font-size: 10px;
+  color: #999;
+  margin-top: 3px;
 }
