@@ -358,6 +358,7 @@ table.qt td.nb {
   padding: 3px 5px;
   font-weight: bold;
   font-size: 11px;
+  white-space: nowrap;
 }
 
 .ft-val {
@@ -366,6 +367,7 @@ table.qt td.nb {
   padding: 3px 5px;
   font-weight: bold;
   font-size: 11px;
+  white-space: nowrap;
 }
 
 .ft-sub {
@@ -374,7 +376,7 @@ table.qt td.nb {
 
 .ft-grand {
   background: #e8e8e8;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 /* ── 交通費の自動入力（備考）フィールド ── */

@@ -132,8 +132,8 @@ function fmtDate() {
 
 function ftRow(label, val, cls='') {
   return `<tr>
-    <td colspan="9" class="nb"></td>
-    <td class="ft-label ${cls}">${label}</td>
+    <td colspan="8" class="nb"></td>
+    <td colspan="2" class="ft-label ${cls}">${label}</td>
     <td class="ft-val ${cls}">${val}</td>
   </tr>`;
 }
