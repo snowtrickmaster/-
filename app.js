@@ -12,7 +12,7 @@ function addPerformRow() {
 
 function addTransportRow() {
   const id = rowId++;
-  transportRows.push({ id, date:'', name:'', count:'', route:'', price:'', note:'' });
+  transportRows.push({ id, date:'', name:'', count:'', route:'', price:'', note:'', autoNote:true });
   renderTransportEditor();
   renderPreview();
 }
@@ -37,21 +37,38 @@ function updatePerformRow(id, field, val) {
   renderPreview();
 }
 
-// 交通費の行更新：単価変更時は備考欄に「片道◯◯円」を自動入力する。
-// 編集パネル全体は再描画せず、備考inputだけをピンポイントで書き換えることで
-// 入力中にフォーカスが外れて入力が止まる問題を防ぐ。
+// 交通費の行更新：往復チェックがONのときだけ、単価変更時に備考欄へ
+// 「片道◯◯円」を自動入力する。編集パネル全体は再描画せず、備考inputだけを
+// ピンポイントで書き換えることで入力中にフォーカスが外れる問題を防ぐ。
 function updateTransportRow(id, field, val) {
   const r = transportRows.find(r => r.id === id);
   if (!r) return;
   r[field] = val;
 
-  if (field === 'price') {
+  if (field === 'price' && r.autoNote) {
     const price = parseFloat(val) || 0;
     r.note = price > 0 ? `片道${Math.round(price / 2).toLocaleString()}円` : '';
     const noteInput = document.querySelector(`input[data-note-id="${id}"]`);
     if (noteInput) noteInput.value = r.note;
   }
 
+  renderPreview();
+}
+
+// 往復／片道の自動計算チェックボックスが切り替えられたとき
+function toggleAutoNote(id, checked) {
+  const r = transportRows.find(r => r.id === id);
+  if (!r) return;
+  r.autoNote = checked;
+
+  if (checked) {
+    const price = parseFloat(r.price) || 0;
+    r.note = price > 0 ? `片道${Math.round(price / 2).toLocaleString()}円` : '';
+  } else {
+    r.note = '';
+  }
+
+  renderTransportEditor();
   renderPreview();
 }
 
@@ -69,13 +86,14 @@ function inpPerform(label, field, id, placeholder, type='text') {
   </div>`;
 }
 
-// 交通費用フィールド（備考は自動入力・読み取り専用）
-function inpTransport(label, field, id, placeholder, type='text', readonly=false) {
+// 交通費用フィールド（備考はautoNoteがONのときだけ自動入力・読み取り専用）
+function inpTransport(label, field, id, placeholder, type='text', isNoteField=false) {
   const r = transportRows.find(r => r.id === id);
   const val = r?.[field] || '';
+  const readonly = isNoteField && r?.autoNote;
   const cls = readonly ? 'auto-filled' : '';
   const ro = readonly ? 'readonly' : '';
-  const dataAttr = readonly ? `data-note-id="${id}"` : '';
+  const dataAttr = isNoteField ? `data-note-id="${id}"` : '';
   return `<div class="field-group">
     <label>${label}</label>
     <input type="${type}" value="${esc(val)}" placeholder="${placeholder}" class="${cls}" ${ro} ${dataAttr}
@@ -117,7 +135,13 @@ function renderTransportEditor() {
         <div>${inpTransport('人数','count',r.id,'12','number')}</div>
         <div class="wide">${inpTransport('経路','route',r.id,'12名（稲荷山公園駅〜池袋）')}</div>
         <div>${inpTransport('単価（往復）','price',r.id,'980','number')}</div>
-        <div class="wide">${inpTransport('備考（自動）','note',r.id,'片道490円','text',true)}</div>
+        <div class="wide checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" ${r.autoNote ? 'checked' : ''} onchange="toggleAutoNote(${r.id}, this.checked)" />
+            片道料金を備考に自動計算する
+          </label>
+        </div>
+        <div class="wide">${inpTransport(r.autoNote ? '備考（自動）' : '備考','note',r.id,r.autoNote ? '片道490円' : '備考を入力',  'text', true)}</div>
       </div>
     </div>
   `).join('');

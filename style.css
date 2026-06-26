@@ -392,3 +392,24 @@ table.qt td.nb {
   color: #999;
   margin-top: 3px;
 }
+
+/* ── 往復／片道 自動計算チェックボックス ── */
+.checkbox-group {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #555;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
